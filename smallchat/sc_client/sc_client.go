@@ -1,11 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/json"
+	"bufio"
+	"mypkg/smallchat/sc_msg"
 	"net"
+	"os"
 
+	_ "github.com/gorilla/websocket"
 	"gopkg.in/ffmt.v1"
 )
 
@@ -18,45 +19,39 @@ func main() {
 		ffmt.Mark(err)
 		return
 	}
-	//	ReadMsg(conn)
-	var v string
+	go ReceiveMsg(conn)
+	SendMsg(conn)
+}
+func SendMsg(conn net.Conn) {
+	defer conn.Close()
+	input := bufio.NewScanner(os.Stdin)
+	for input.Scan() {
+		err := input.Err()
+		if err != nil {
+			ffmt.Mark(err)
+			break
+		}
+		err = msg.Send(conn, input.Text())
+		if err != nil {
+			ffmt.Mark(err)
+			break
+		}
+	}
+	err := input.Err()
+	if err != nil {
+		ffmt.Mark(err)
+	}
+}
+
+func ReceiveMsg(conn net.Conn) {
+	defer conn.Close()
+	var v interface{}
 	for {
-		Receive(conn, &v)
+		err := msg.Receive(conn, &v)
+		if err != nil {
+			ffmt.Mark(err)
+			break
+		}
 		ffmt.Puts(v)
 	}
-}
-
-func ReadMsg(conn net.Conn) {
-	defer conn.Close()
-	for {
-		buf := make([]byte, 1024)
-		bufs := bytes.NewBuffer(buf)
-		for {
-			_, err := conn.Read(buf)
-			if err != nil {
-				ffmt.Mark(err)
-			}
-			ffmt.Mark(string(buf[:18]))
-			bufs.Read(buf)
-		}
-		ffmt.Mark(bufs.String())
-	}
-}
-
-func Receive(conn net.Conn, v interface{}) error {
-	_, err := conn.Read(Buffer)
-	if err != nil {
-		return err
-	}
-	l := binary.LittleEndian.Uint32(Buffer[:4])
-	ffmt.Mark(l)
-	_, err = conn.Read(BufferBody[:int(l)])
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(BufferBody[:int(l)], v)
-	if err != nil {
-		return err
-	}
-	return nil
 }
