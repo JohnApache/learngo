@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/websocket"
 	"gopkg.in/ffmt.v1"
 )
 
@@ -20,6 +21,8 @@ func (m *IMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.NotFound(w, r)
+	conn, err := websocket.Upgrade(w, r, 1024, 1024)
+	conn.SetPongHWandler()
 }
 
 func CreateWebsocket(w http.ResponseWriter, r *http.Request) {
