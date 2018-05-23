@@ -1,13 +1,38 @@
 package main
 
+import (
+	"fmt"
+)
+
+var WholeCount int
+var pb = NewPiecesBoard(1, 1)
+
 func main() {
 	//	八皇后问题是一个以国际象棋为背景的问题：如何能够在 8×8 的国际象棋棋盘上放置八个皇后，
 	//	使得任何一个皇后都无法直接吃掉其他的皇后？为了达到此目的，任两个皇后都不能处于同一条横行、
 	//	纵行或斜线上。八皇后问题可以推广为更一般的n皇后摆放问题：
 	//	这时棋盘的大小变为n1×n1，而皇后个数也变成n2。而且仅当 n2 = 1 或 n1 ≥ 4 时问题有解。
-	pb := NewPiecesBoard(8, 8)
-	for i := 0; i < len(pb.Board); i++ {
+	//	pb := NewPiecesBoard(8, 8)
+	pb.Run(pb.NextPieces(0), 0)
+	fmt.Println(WholeCount)
 
+}
+func (pb *PiecesBoard) Run(ps []Piece, c int) {
+	c = c + 1
+	if c > pb.maxX || c > pb.maxY {
+		WholeCount++
+		return
+	}
+	b := pb.StoreScene()
+	for _, v := range ps {
+		if v.IsUse == true {
+			pb.ReStoreScene(b)
+			continue
+		}
+		pb.HoldPiece(&v)
+		nps := pb.NextPieces(c)
+		pb.Run(nps, c)
+		pb.ReStoreScene(b)
 	}
 }
 
@@ -47,11 +72,51 @@ func NewPiecesBoard(mx, my int) *PiecesBoard {
 }
 
 func (pb *PiecesBoard) ClearUse() {
+	pb.WalkPieces(func(p *Piece) {
+		p.IsUse = false
+	})
+}
+
+func (pb *PiecesBoard) WalkPieces(f func(p *Piece)) {
 	for i, _ := range pb.Board {
 		for j, _ := range pb.Board[i] {
-			pb.Board[i][j].IsUse = false
+			f(&pb.Board[i][j])
 		}
 	}
+}
+func (pb *PiecesBoard) RestPieces() []Piece {
+	ps := []Piece{}
+	pb.WalkPieces(func(p *Piece) {
+		if !p.IsUse {
+			ps = append(ps, *p)
+		}
+	})
+	return ps
+}
+
+func (pb *PiecesBoard) NextPieces(i int) []Piece {
+	if i >= len(pb.Board) {
+		return nil
+	}
+	return pb.Board[i]
+}
+
+//store current scene
+func (pb *PiecesBoard) StoreScene() []bool {
+	b := []bool{}
+	pb.WalkPieces(func(p *Piece) {
+		b = append(b, p.IsUse)
+	})
+	return b
+}
+
+//restore scene
+func (pb *PiecesBoard) ReStoreScene(b []bool) {
+	i := 0
+	pb.WalkPieces(func(p *Piece) {
+		p.IsUse = b[i]
+		i++
+	})
 }
 
 //holdAll
